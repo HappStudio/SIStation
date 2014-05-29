@@ -7,6 +7,8 @@ using System.Text;
 using System.Web;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Excel = Microsoft.Office.Interop.Excel;
+using System.Reflection;
 
 namespace SIStation  
 {  
@@ -66,7 +68,7 @@ namespace SIStation
                 return null;  
             }
 
-            List<JObject> tableData = new List<JObject>();
+            List<JObject> json = new List<JObject>();
             foreach (DataRow dr in dt.Rows)  
             {  
                 JObject rowObj = new JObject();
@@ -74,9 +76,9 @@ namespace SIStation
                 {  
                     rowObj.Add(dc.ColumnName, JToken.FromObject(dr[dc]));
                 }
-                tableData.Add(rowObj);
+                json.Add(rowObj);
             }
-            return tableData;  
+            return json;  
         }
 
         /// <summary>  
@@ -84,6 +86,105 @@ namespace SIStation
         /// </summary>  
         /// <param name="dt">json对象</param>  
         /// <returns>Excel</returns>  
-        
+        public static void JsonToExcel(IList<JObject> json, string excel)
+        {
+            Excel.Application excelApp = new Excel.Application();
+            try
+            {
+                excelApp.SheetsInNewWorkbook = 1;
+                Excel._Workbook workBook = (Excel._Workbook)(excelApp.Workbooks.Add());//添加新工作簿
+                Excel._Worksheet workSheet = (Excel._Worksheet)(excelApp.Worksheets.Add());
+                workSheet.Name = excel;
+
+                int row = 1;
+                int column = 1;
+                foreach (JProperty property in json[0].Properties())
+                {
+                    workSheet.Cells[row, column++] = property.Name;
+                }
+
+                foreach (JObject jobj in json)
+                {
+                    column = 1;
+                    row++;
+                    foreach (JProperty property in jobj.Properties())
+                    {
+                        workSheet.Cells[row, column++] = JTokenValue(property.Value);
+                    }
+                }
+
+                workBook.SaveAs(Path.Combine(Directory.GetCurrentDirectory(), excel));
+                workBook.Close(true);
+            }
+            finally
+            {
+                excelApp.Quit();
+            }
+        }
+
+        /// <summary>  
+        /// 将 Excel输出到 json对象
+        /// </summary>  
+        /// <param name="dt">json对象</param>  
+        /// <returns>Excel</returns>  
+        public static List<JObject> ExcelToJson(string excel)
+        {
+            List<JObject> json = new List<JObject>();
+            Excel.Application excelApp = new Excel.Application();
+            try
+            {
+                excelApp.Workbooks.Open(Path.Combine(Directory.GetCurrentDirectory(), excel));
+                excelApp.Visible = false;
+                Excel._Workbook workBook = excelApp.ActiveWorkbook;
+                Excel._Worksheet workSheet = (Excel.Worksheet)workBook.ActiveSheet;
+                int column = workSheet.UsedRange.Columns.Count;
+                int row = workSheet.UsedRange.Rows.Count;
+
+                for (int i = 1; i < row; i++)
+                {
+                    JObject rowObj = new JObject();
+                    for (int j = 0; j < column; j++)
+                    {
+                        Object obj = workSheet.Cells[1 + i, 1 + j].Value;
+                        JToken token = JToken.FromObject(obj);
+                        rowObj.Add(workSheet.Cells[1, 1 + j].Value.ToString(), token);
+                    }
+                    json.Add(rowObj);
+                }
+            }
+            finally
+            {
+                excelApp.Quit();
+            }
+            
+            return json;
+        }
+
+        private static object JTokenValue(JToken token)
+        {
+            switch (token.Type)
+            {
+                case JTokenType.Integer:
+                    {
+                        return token.Value<int>();
+                    }
+                case JTokenType.Boolean:
+                    {
+                        return token.Value<bool>();
+                    }
+                case JTokenType.String:
+                    {
+                        return token.Value<string>();
+                    }
+                case JTokenType.Bytes:
+                    {
+                        return token.Value<byte[]>();
+                    }
+                default:
+                    {
+                        return null;
+                    }
+            }
+        }
     }  
 } 

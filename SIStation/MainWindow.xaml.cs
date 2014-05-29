@@ -11,10 +11,12 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using System.Data.SqlClient;
-using Excel = Microsoft.Office.Interop.Excel;
-using System.IO;
-using System.Reflection;
+using System.Diagnostics;
+using System.Data;
+using System.Data.SQLite;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
 
 namespace SIStation
 {
@@ -27,19 +29,37 @@ namespace SIStation
         {
             InitializeComponent();
 
-            Excel.Application m_Excel = new Excel.Application();
-            m_Excel.SheetsInNewWorkbook = 1;
-            Excel._Workbook m_Book = (Excel._Workbook)(m_Excel.Workbooks.Add(Missing.Value));//添加新工作簿
-            //Excel._Worksheet m_Sheet = (Excel._Worksheet)(m_Excel.Worksheets.Add(Missing.Value));
-            //这里先这么写。。= =！
-            Excel._Worksheet m_Sheet = (Excel._Worksheet)(m_Excel.Worksheets.Add(Missing.Value, Missing.Value, Missing.Value, Missing.Value));
-            m_Sheet.Name = "工资报表";
-            DateTime date = DateTime.Now;
-            int month = date.Month;
+            try
+            {
+                string sql = "create table if not exists UserTable (userId integer primary key AutoIncrement,displayName varchar(20),department varchar(20))";
+                SQLiteHelper.Instance.ExecuteNonQuery(sql);
 
-            m_Book.SaveAs(Directory.GetCurrentDirectory()+"/MyExcel", Missing.Value, Missing.Value, Missing.Value, Missing.Value, Missing.Value, Excel.XlSaveAsAccessMode.xlNoChange, Missing.Value, Missing.Value, Missing.Value, Missing.Value, Missing.Value);
-            m_Book.Close(false, Missing.Value, Missing.Value);
-            m_Excel.Quit();
+                sql = "select * from UserTable";
+                DataTable td = SQLiteHelper.Instance.ExecuteReader(sql);
+                if (td.Rows.Count==0)
+                {
+                    sql = "insert into UserTable (userId, displayName, department) values (10, '妖怪', '321')";
+                    SQLiteHelper.Instance.ExecuteNonQuery(sql);
+                }
+
+                sql = "select @userid, displayName, department from UserTable";
+                td = SQLiteHelper.Instance.ExecuteReader(sql, new SQLiteParameter("userid", 10));
+                List<JObject> json = JSONHelper.DataTableToJson(td);
+
+                Debug.Assert("妖怪".Equals(json[0].Property("displayName").Value.ToString()), "WTF!!!");
+
+                sql = "select * from UserTable";
+                td = SQLiteHelper.Instance.ExecuteReader(sql);
+                json = JSONHelper.DataTableToJson(td);
+                JSONHelper.JsonToExcel(json, "员工花名册");
+
+                List<JObject> jsonValidated = JSONHelper.ExcelToJson("员工花名册");
+                Debug.Assert(JSONHelper.JsonSerializer(jsonValidated[0]).Equals(JSONHelper.JsonSerializer(json[0])), "WTF!!!");
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e.StackTrace);
+            }
         }
     }
 }

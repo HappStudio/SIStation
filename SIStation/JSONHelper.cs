@@ -91,34 +91,45 @@ namespace SIStation
             Excel.Application excelApp = new Excel.Application();
             try
             {
+                excelApp.DisplayAlerts = false;
                 excelApp.SheetsInNewWorkbook = 1;
+                excelApp.UserControl = false;
                 Excel._Workbook workBook = (Excel._Workbook)(excelApp.Workbooks.Add());//添加新工作簿
-                Excel._Worksheet workSheet = (Excel._Worksheet)(excelApp.Worksheets.Add());
-                workSheet.Name = excel;
-
-                int row = 1;
-                int column = 1;
-                foreach (JProperty property in json[0].Properties())
+                try
                 {
-                    workSheet.Cells[row, column++] = property.Name;
-                }
+                    workBook.Saved = true;
+                    Excel._Worksheet workSheet = (Excel._Worksheet)(excelApp.Worksheets.Add());
+                    workSheet.Name = excel;
 
-                foreach (JObject jobj in json)
-                {
-                    column = 1;
-                    row++;
-                    foreach (JProperty property in jobj.Properties())
+                    int row = 1;
+                    int column = 1;
+                    foreach (JProperty property in json[0].Properties())
                     {
-                        workSheet.Cells[row, column++] = property.Value.ToString();
+                        workSheet.Cells[row, column++] = property.Name;
                     }
-                }
 
-                workBook.SaveAs(Path.Combine(Directory.GetCurrentDirectory(), excel));
-                workBook.Close(true);
+                    foreach (JObject jobj in json)
+                    {
+                        column = 1;
+                        row++;
+                        foreach (JProperty property in jobj.Properties())
+                        {
+                            workSheet.Cells[row, column++] = property.Value.ToString();
+                        }
+                    }
+
+                    workBook.SaveAs(Path.Combine(Directory.GetCurrentDirectory(), excel));
+                }
+                finally
+                {
+                    workBook.Close(true);
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(workBook);
+                }
             }
             finally
             {
                 excelApp.Quit();
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
             }
         }
 
@@ -133,29 +144,37 @@ namespace SIStation
             Excel.Application excelApp = new Excel.Application();
             try
             {
-                excelApp.Workbooks.Open(Path.Combine(Directory.GetCurrentDirectory(), excel));
                 excelApp.Visible = false;
+                excelApp.Workbooks.Open(Path.Combine(Directory.GetCurrentDirectory(), excel));
                 Excel._Workbook workBook = excelApp.ActiveWorkbook;
-                Excel._Worksheet workSheet = (Excel.Worksheet)workBook.ActiveSheet;
-                int column = workSheet.UsedRange.Columns.Count;
-                int row = workSheet.UsedRange.Rows.Count;
-
-                for (int i = 1; i < row; i++)
+                try
                 {
-                    JObject rowObj = new JObject();
-                    for (int j = 0; j < column; j++)
+                    Excel._Worksheet workSheet = (Excel.Worksheet)workBook.ActiveSheet;
+                    int column = workSheet.UsedRange.Columns.Count;
+                    int row = workSheet.UsedRange.Rows.Count;
+
+                    for (int i = 1; i < row; i++)
                     {
-                        Object obj = workSheet.Cells[1 + i, 1 + j].Value;
-                        JToken token = JToken.FromObject(obj.ToString());
-                        rowObj.Add(workSheet.Cells[1, 1 + j].Value.ToString(), token);
+                        JObject rowObj = new JObject();
+                        for (int j = 0; j < column; j++)
+                        {
+                            Object obj = workSheet.Cells[1 + i, 1 + j].Value;
+                            JToken token = JToken.FromObject(obj.ToString());
+                            rowObj.Add(workSheet.Cells[1, 1 + j].Value.ToString(), token);
+                        }
+                        json.Add(rowObj);
                     }
-                    json.Add(rowObj);
                 }
-                workBook.Close();
+                finally
+                {
+                    workBook.Close();
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(workBook);
+                }
             }
             finally
             {
                 excelApp.Quit();
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
             }
             
             return json;

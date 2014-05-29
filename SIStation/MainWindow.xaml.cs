@@ -53,8 +53,8 @@ namespace SIStation
                 json = JSONHelper.DataTableToJson(td);
                 JSONHelper.JsonToExcel(json, "员工花名册");
 
-                List<JObject> jsonValidated = JSONHelper.ExcelToJson("员工花名册");
-                Debug.Assert(JSONHelper.JsonSerializer(jsonValidated[0]).Equals(JSONHelper.JsonSerializer(json[0])), "WTF!!!");
+               // List<JObject> jsonValidated = JSONHelper.ExcelToJson("员工花名册");
+               // Debug.Assert(JSONHelper.JsonSerializer(jsonValidated[0]).Equals(JSONHelper.JsonSerializer(json[0])), "WTF!!!");
             }
             catch (Exception e)
             {

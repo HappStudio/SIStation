@@ -74,7 +74,7 @@ namespace SIStation
                 JObject rowObj = new JObject();
                 foreach (DataColumn dc in dt.Columns)  
                 {  
-                    rowObj.Add(dc.ColumnName, JToken.FromObject(dr[dc]));
+                    rowObj.Add(dc.ColumnName, JToken.FromObject(dr[dc].ToString()));
                 }
                 json.Add(rowObj);
             }
@@ -109,7 +109,7 @@ namespace SIStation
                     row++;
                     foreach (JProperty property in jobj.Properties())
                     {
-                        workSheet.Cells[row, column++] = JTokenValue(property.Value);
+                        workSheet.Cells[row, column++] = property.Value.ToString();
                     }
                 }
 
@@ -146,11 +146,12 @@ namespace SIStation
                     for (int j = 0; j < column; j++)
                     {
                         Object obj = workSheet.Cells[1 + i, 1 + j].Value;
-                        JToken token = JToken.FromObject(obj);
+                        JToken token = JToken.FromObject(obj.ToString());
                         rowObj.Add(workSheet.Cells[1, 1 + j].Value.ToString(), token);
                     }
                     json.Add(rowObj);
                 }
+                workBook.Close();
             }
             finally
             {

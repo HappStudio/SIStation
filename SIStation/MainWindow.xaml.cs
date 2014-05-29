@@ -42,7 +42,7 @@ namespace SIStation
                     SQLiteHelper.Instance.ExecuteNonQuery(sql);
                 }
 
-                sql = "select @userid, displayName, department from UserTable";
+                sql = "select userId, displayName, department from UserTable where userId = @userid";
                 td = SQLiteHelper.Instance.ExecuteReader(sql, new SQLiteParameter("userid", 10));
                 List<JObject> json = JSONHelper.DataTableToJson(td);
 

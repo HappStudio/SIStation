@@ -98,7 +98,7 @@ namespace SIStation
                 {
                     Directory.CreateDirectory(dir);
                 }
-                File.Create(dbPath);
+                using (File.Create(dbPath)) { };
             }
             string connectionString = "Data Source=" + dbPath;
             SQLiteConnection sqliteConnection = new SQLiteConnection(connectionString);
